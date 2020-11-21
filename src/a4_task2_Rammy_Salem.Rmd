@@ -1,0 +1,249 @@
+---
+title: "a4_task2_Rammy_Salem"
+author: "Rammy Salem"
+date: "11/20/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+# load packages
+library(tidyverse)
+library(janitor)
+library(here)
+library(dplyr)
+library(ggplot2)
+library(kableExtra)
+library(lubridate)
+library(effsize)
+```
+
+```{r}
+# read csv file
+snowshoe_hares <- read_csv(here("data","bonanza_hares.csv"))
+```
+
+# **Introduction**
+#### **[add intro last]**
+
+# **Data and analyses**
+#### This data set contains the counts and sizes of juvenile snowshoe hares recorded from 1998 - 2012 in the Bonanza Creek Experimental Forest located approximately 20 km southwest of Fairbanks, Alaska. The data were collected through the Bonanza Creek Long-Term Ecological Research program (Kielland, Chapin, Ruess, & Bonanza Creek LTER, 2017). **[provide an overview of the main analysis, statistical methods and tools used.]**
+
+# **Exploratory Findings**
+### **Annual juvenile hare trap counts**
+```{r}
+juvenile_snowshoe_hares <- snowshoe_hares %>% # Start from snowshoe hares data
+  filter(age == "j") %>%  # Filtered to only include observations for juvenile snowshoe hares
+  mutate(grid_full = case_when( # Create a new column called site_full that contains the full name for each of the five sites
+    grid == "bonbs" ~ "Bonanza Black Spruce",
+    grid == "bonmat" ~ "Bonanza Mature",
+    grid == "bonrip" ~ "Bonanza Riparian",
+  ))
+```
+
+
+```{r}
+juvenile_snowshoe_hares_traps <- juvenile_snowshoe_hares %>% # Start from juvenile snowshoe hares data
+  mutate(date = mdy(date)) %>% # Convert the date to class “Date”
+  mutate(year = year(date)) %>% # Create a new column that only contains the year
+  group_by(year) %>% # Group by site and year
+  count(year) %>% # Count observations by group
+  as.data.frame(juvenile_snowshoe_hares_traps) # Convert juvenile snowshoe hares list to data frame
+```
+
+```{r, include = FALSE}
+ juvenile_snowshoe_hares_traps_table <- juvenile_snowshoe_hares_traps %>%
+  summarize(mean_trappings = mean(n),# Find mean size
+            median_trappings = median(n), # Find median size
+            sd_trappings = sd(n), # Find standard deviation size
+            n = sum(n)) # Find sample size
+```
+
+```{r, fig.cap= "Figure 1. Total number of juvenile snowshoe hare trappings by year"}
+ggplot(data = juvenile_snowshoe_hares_traps,aes(x = year, y = n)) + # select x-axis variable
+  geom_bar(stat="identity") + #create bar graph
+  scale_x_continuous(name="Year", # Add x-axis label
+                     breaks = seq(1998,2012,1), # specify breaks
+                     limits=c(1998, 2012)) + # specify limits
+  scale_y_continuous(name = "Number of Juvenile Snowshoe Hares", # Add y-axis labels
+                     breaks = seq(0,130,10), # specify breaks)
+                     limits=c(0, 130)) # specify limits
+```
+#### As shown in Figure 1, juvenile snowshoe hare trappings generally decreased from 1998-2012. The largest number of trappings occurred in 1999 (*n* = 126), and no juvenile snowshoe hare trappings were recorded for the years 1998, 2002, 2009, and 2012. A total of 378 juvenile snowshoe hares were trapped during this period, and the average number of snowshoe hare trappings per year was 31.5. Since the number of trappings are impacted by effort such as the number of days and number of traps set per year, one recommendation for the researchers would be to determine and agree upon a standardized number of days and trappings per year in order to control for the effects of these exogenous variables. 
+
+### **Visualize juvenile hare weights**
+```{r}
+juvenile_snowshoe_hares_weights <- juvenile_snowshoe_hares %>% # Start from juvenile snowshoe hares data
+  group_by(grid, sex) %>% # group by site and by sex
+  summarize(mean_weight = mean(weight, na.rm = T),# Find mean weight
+            median_weight = median(weight, na.rm = T), # Find median weight
+            sd_weight = sd(weight, na.rm = T)) # Find standard deviation weight
+  
+```
+```{r}
+juvenile_snowshoe_hares_weights_by_sex <- juvenile_snowshoe_hares %>% # Start from juvenile snowshoe hares data
+  group_by(sex) %>% # group by site and by sex
+  summarize(mean_weight = mean(weight, na.rm = T),# Find mean weight
+            median_weight = median(weight, na.rm = T), # Find median weight
+            sd_weight = sd(weight, na.rm = T)) # Find standard deviation weight
+```
+```{r}
+juvenile_snowshoe_hares_weights_by_site <- juvenile_snowshoe_hares %>% # Start from juvenile snowshoe hares data
+  group_by(grid) %>% # group by site and by sex
+  summarize(mean_weight = mean(weight, na.rm = T),# Find mean weight
+            median_weight = median(weight, na.rm = T), # Find median weight
+            sd_weight = sd(weight, na.rm = T)) # Find standard deviation weight
+```
+
+
+```{r,  fig.cap = "Figure 2. Distribution of weights for juvenile snowshoe hares by sex and site. *Note*. NA = sex could not be confirmed."}
+mean_disp <- mean(juvenile_snowshoe_hares$weight, na.rm = T)
+# mean_disp
+
+ggplot(data = juvenile_snowshoe_hares, aes(x = sex, y = weight, color = sex)) + # select x- and y-axis variables
+  geom_boxplot() + #create boxplot
+  facet_wrap(~grid_full) + # facet wrapped by site
+  scale_x_discrete(labels = c('Female', 'Male', 'NA')) +
+  scale_y_continuous(name = "Juvenile Snowshoe Hare Weight (grams)", # Add y-axis label
+                     breaks = seq(0,1600,200), # specify breaks)
+                     limits=c(0, 1600)) + # specify limits 
+  geom_hline(yintercept = mean_disp, linetype = "dashed") +
+  labs(title = "Juvenile Snowshoe Hare Weights by Sex and Site", # Add graph title
+       x = "Sex", # Added x-axis label
+       color = "Sex")
+```
+
+#### As shown in Figure 2, juvenile snowshoe hare weights in grams were, on average, higher for males (*M* = 945.86, *SD* = 333.22) than females (*M* = 855.39, *SD* = 292.25) and hares whose sex could not be identified (*M* = 614.55, *SD* = 357.59) across all three trapping sites. In addition, juvenile snowshoe hares trapped in the Bonanza Black Spruce site weighed more (*M* = 1036.17, *SD* = 273.93), on average, than juvenile snowshoe hares trapped in the Bonanza Mature (*M* = 878.05, *SD* = 338.92) and Bonanza Riparian (*M* = 862.59, *SD* = 313.15) sites.
+
+### **Juvenile weight comparison (male & female snowshoe hares).**
+```{r}
+juvenile_snowshoe_hares_weights_table_by_sex <- juvenile_snowshoe_hares %>% # Start from juvenile snowshoe hares data set
+  drop_na("sex") %>% # remove the NAs in sex
+  group_by(sex) %>% # group by sex
+  summarize(mean_weight = mean(weight, na.rm = T),# Find mean weight
+            median_weight = median(weight, na.rm = T), # Find median weight
+            sd_weight = sd(weight, na.rm = T), # Find sample size
+            sample_size = n()) # Find standard deviation weight
+
+juvenile_snowshoe_hares_weights_table_by_sex %>% 
+  kable(col.names = c("Sex", # Rename columns
+                      "Mean weight (g)",
+                      "Median weight (g)",
+                      "SD weight (g)",
+                      "Sample size (n)"),
+        caption = "Table 1. Descriptive Statistics for Weights of Male and Female Snowshoe Hares") %>%  # Add table caption
+  kable_styling()  # Use kableExtra to make table look nice
+```
+```{r, include = FALSE}
+# Faceted Histograms
+ggplot(data = juvenile_snowshoe_hares, aes(x = weight)) + 
+  geom_histogram() + 
+  facet_wrap(~sex)
+```
+
+```{r, include = FALSE}
+# Faceted QQ Plots
+ggplot(data = juvenile_snowshoe_hares, aes(sample = weight)) +
+  geom_qq() +
+  facet_wrap(~sex)
+```
+
+
+```{r, include = FALSE}
+# Create vectors containing observations for each sample (females and males)
+female_sample <- juvenile_snowshoe_hares %>% 
+  filter(sex == "f") %>% # filter for only juvenile female snowshoe hares
+  pull(weight) # create vector of size data
+
+male_sample <- juvenile_snowshoe_hares %>%
+  filter(sex == "m") %>% # filter only control treatment
+  pull(weight) # Create vector of size data
+
+juvenile_snowshoe_hares_ttest <- t.test(x = male_sample, female_sample) # Perform a two-sample t-test to compare means between the two groups
+juvenile_snowshoe_hares_ttest # display results
+
+juvenile_snowshoe_hares_tidytable <- broom::tidy(juvenile_snowshoe_hares_ttest) # get results using broom package
+juvenile_snowshoe_hares_tidytable # display results
+
+cohen.d(male_sample, female_sample, na.rm = T)
+```
+
+#### Results of an independent samples *t*-test comparing juvenile snowshoe hare weights in grams of males vs. females revealed that males (*M* = 945.86, *SD* = 333.22) weighed significantly more than females (*M* = 855.39, *SD* = 292.25), *t*(325.02) = 2.71, *p* = .007, *d* = .29. The effect size for this analysis (*d* = .29) was found to exceed Cohen’s (1988) convention for a small effect (*d* = .20). 
+
+
+### **Relationship between juvenile weight & hind foot length**
+
+```{r, fig.cap = "Figure 3. Relationship between Juvenile Snoeshoe Hare Weight & Hind Foot Length"}
+ggplot(data = juvenile_snowshoe_hares, aes(x = hindft, # select x-axis variable
+                                         y = weight)) + # Select y-axis variable
+  geom_point() + # create scatterplot
+  scale_y_continuous(name = "Hare Weight (grams)", # Add y-axis label
+                     breaks = seq(0,1600,200), # specify breaks
+                     limits=c(0, 1600)) + # specify limits
+  scale_x_continuous(name = "Hare Hindfoot Length (mm)", # Add x-axis label
+                     breaks = seq(0,160,10), # specify breaks
+                     limits=c(0, 160)) # specify limits
+```
+
+```{r, include = FALSE}
+snowshoe_hare_lm <- lm(weight ~ hindft, data = juvenile_snowshoe_hares)
+summary(snowshoe_hare_lm)
+```
+
+```{r, include = FALSE}
+#get the model outputs in nice data frame format
+snowshoe_hare_lm_tidy <- broom::tidy(snowshoe_hare_lm)
+snowshoe_hare_lm_tidy 
+```
+
+```{r, include = FALSE}
+# Get the intercept: 
+snowshoe_hare_int <- snowshoe_hare_lm_tidy$estimate[1]
+snowshoe_hare_int
+```
+
+```{r, include = FALSE}
+# Then to get the flipper_length coefficient:
+snowshoe_hare_coef <- snowshoe_hare_lm_tidy$estimate[2]
+snowshoe_hare_coef
+```
+
+```{r, include = FALSE}
+# Metrics at a glance: 
+snowshoe_hare_lm_out <- broom::glance(snowshoe_hare_lm)
+snowshoe_hare_lm_out
+```
+
+
+```{r, fig.cap = "Figure 4. Simple Linear Regression for Relationship between Juvenile Snoeshoe Hare Weight & Hind Foot Length"}
+ggplot(data = juvenile_snowshoe_hares, aes(x = hindft, # select x-axis variable
+                                         y = weight)) + # Select y-axis variable
+  geom_point() + # create scatterplot
+  scale_y_continuous(name = "Hare Weight (grams)", # Add y-axis label
+                     breaks = seq(0,1600,200), # specify breaks
+                     limits=c(0, 1600)) + # specify limits
+  scale_x_continuous(name = "Hare Hindfoot Length (mm)", # Add x-axis label
+                     breaks = seq(0,160,10), # specify breaks
+                     limits=c(0, 160)) + # specify limits
+  geom_smooth(method = "lm") + # add a linear model to the scatterplot
+  ggpubr::stat_regline_equation(label.x = 70, label.y = 1150) # add regression equation
+```
+
+```{r, include = FALSE}
+# Explore model assumptions
+plot(snowshoe_hare_lm)
+```
+
+```{r, include = FALSE}
+snowshoe_hare_cor <- cor.test(juvenile_snowshoe_hares$hindft, juvenile_snowshoe_hares$weight)
+snowshoe_hare_cor
+```
+
+#### Simple linear regression was used to explore the relationship between juvenile snowshoe hare hindfoot length (mm) and weight (g) including both male and female hares. A significant regression model was found ($\beta$ = `r round(snowshoe_hare_coef,3)`, *F*(`r snowshoe_hare_lm_out$df`,`r snowshoe_hare_lm_out$df.residual`) = `r round(snowshoe_hare_lm_out$statistic,1)`, p < .001) with an R^2^ of `r round(snowshoe_hare_lm_out$r.squared,3)`. Pearson's correlation indicated a moderate positive correlation between juvenile snowshoe hare hindfoot length and weight (*r* = .55, t(247) = 10.26, p < 0.001).As for model assumptions, the variance of the residuals appeared relatively constant across the entire span of the model, suggesting homoscedasticity, but the QQ-plot revealed that the distribution was trending away from linearity, so this may be a cause for concern. 
+
+
+
+#### **Summary**
+Juvenile snowshoe hare hindfoot length predicts hare weight such that, on average, the longer the hindfoot, the larger the weight. On average, we expect weight to increase by 9.52 grams for each 1 mm increase in hindfoot length.
+
+#### **Citation**: Kielland, K., F.S. Chapin, R.W. Ruess, & Bonanza Creek LTER. (2017). *Snowshoe hare physical data in Bonanza Creek Experimental Forest: 1999-Present* ver 22. Environmental Data Initiative. (https://doi.org/10.6073/pasta/03dce4856d79b91557d8e6ce2cbcdc14)
